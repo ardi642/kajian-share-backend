@@ -1,0 +1,25 @@
+{
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "drizzle-kit": "^0.30.4",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.0",
+    "@types/express": "^5.0.1",
+    "@types/moment-hijri": "^2.1.4",
+    "@types/node": "^22.13.13",
+    "@types/qs": "^6.9.18",
+    "better-sqlite3": "^11.8.1",
+    "cron": "^4.1.0",
+    "drizzle-orm": "^0.40.0",
+    "express": "^4.21.2",
+    "moment-hijri": "^3.0.0",
+    "openai": "^4.87.4",
+    "piscina": "^4.9.2",
+    "puppeteer": "^24.4.0",
+    "qs": "^6.14.0",
+    "winston": "^3.17.0"
+  },
+  "scripts": {}
+}
