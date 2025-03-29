@@ -72,7 +72,7 @@ if (isMainThread) {
             })
           )
 
-          await sleep(1000)
+          await sleep(200)
         }
       } catch (error: any) {
         logger.error(error)

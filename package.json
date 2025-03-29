@@ -21,5 +21,8 @@
     "qs": "^6.14.0",
     "winston": "^3.17.0"
   },
-  "scripts": {}
+  "scripts": {
+    "extract-lecture": "npx tsx src/cronjob/SaveIslamicLecturesJob.ts",
+    "extract-user": "npx tsx src/cronjob/SaveUserPostsJob.ts"
+  }
 }
