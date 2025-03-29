@@ -78,7 +78,7 @@ export default abstract class UserPosts {
           set: currentUserPostTracker,
         })
       }
-      return
+      return null
     } else if (error != null) {
       await db
         .insert(failedParsingUsers)
@@ -96,5 +96,6 @@ export default abstract class UserPosts {
       if (userPosts.length > 0) logger.error(error, { additionalMessage: `success save some ${userUrl} new posts` })
       else logger.error(error, { additionalMessage: `not success save all ${userUrl} new posts` })
     }
+    return error
   }
 }

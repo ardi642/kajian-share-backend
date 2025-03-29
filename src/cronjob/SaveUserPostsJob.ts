@@ -52,10 +52,15 @@ if (isMainThread) {
           const chunkUserUrls = userUrls.splice(0, 2)
           await Promise.allSettled(
             chunkUserUrls.map(async function (userUrl) {
-              await piscina.run({ userUrl })
+              const error = await piscina.run({ userUrl })
+
+              // there is no error
+              if (error == null) return
+
               const failedUser = await db.query.failedParsingUsers.findFirst({
                 where: sql`${failedParsingUsers.serverId} = ${appConfig.serverId} AND ${failedParsingUsers.userUrl} = ${userUrl}`,
               })
+
               if (failedUser && failedUser.retryCount! <= maxRetryCount) {
                 userUrls.push(userUrl)
                 const retryCount = failedUser!.retryCount

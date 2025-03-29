@@ -173,6 +173,12 @@ if (isMainThread) {
           await Promise.allSettled(
             chunkData.map(async ({ postInfo, APIKey }) => {
               await piscina.run({ postInfo, APIKey })
+
+              const successPost = await db.query.lecturePosts.findFirst({
+                where: sql`${lecturePosts.postId} = ${postInfo.id}`,
+              })
+              if (successPost) return
+
               const failedPost = await db.query.failedParsingPosts.findFirst({
                 where: sql`${failedParsingPosts.postId} = ${postInfo.id} AND ${failedParsingPosts.serverId} = ${appConfig.serverId}`,
               })
