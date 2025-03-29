@@ -147,9 +147,10 @@ if (isMainThread) {
       const piscina = new Piscina({ filename: __filename })
       let postInfos = await db.select().from(posts).where(isNull(posts.isIslamicLecture))
       const maxRetryCount = 3
+      const maxWorkers = 1
       try {
         while (postInfos.length > 0) {
-          const chunkData = postInfos.splice(0, 2).map((postInfo) => {
+          const chunkData = postInfos.splice(0, maxWorkers).map((postInfo) => {
             return {
               postInfo,
               APIKey: appConfig.apiKey,

@@ -27,6 +27,7 @@ if (isMainThread) {
       const piscina = new Piscina({ filename: __filename })
       let browser: Browser | null = null
       const maxRetryCount = 3
+      const maxWorkers = 1
       const appConfig: AppConfig = await loadJson("./app.config.json")
       try {
         browser = await puppeteer.launch({
@@ -49,7 +50,7 @@ if (isMainThread) {
         await sleep(1000)
         let userUrls = appConfig.userUrls
         while (userUrls.length > 0) {
-          const chunkUserUrls = userUrls.splice(0, 2)
+          const chunkUserUrls = userUrls.splice(0, maxWorkers)
           await Promise.allSettled(
             chunkUserUrls.map(async function (userUrl) {
               const error = await piscina.run({ userUrl })
