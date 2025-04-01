@@ -1,19 +1,18 @@
 import { CronJob, timeout } from "cron"
 import { db } from "../utils/database"
-import { APIKeyRequestRateLimits, failedParsingPosts, lecturePosts, posts } from "../db/schema"
+import { APIKeyRequestRateLimits, failedPosts, lecturePosts, posts } from "../db/schema"
 import { eq, isNull, sql } from "drizzle-orm"
 import _appConfig from "../../app.config.json"
-import AppConfig from "../interface/AppConfig"
+import AppConfig from "../interfaces/AppConfig"
 import { parseLecturePost } from "../utils/LLM"
 import { isMainThread } from "worker_threads"
 import Piscina from "piscina"
-import RequestRateLimit from "../interface/RequestRateLimit"
 import logger from "../logger"
 
 type PostInfo = typeof posts.$inferInsert
 type LecturePostInfo = typeof lecturePosts.$inferInsert
 
-const appConfig: AppConfig = _appConfig
+const appConfig = _appConfig as AppConfig
 
 function sleep(ms: number) {
   return new Promise((resolve) => {
@@ -49,7 +48,6 @@ function getDayTimestamp(dateStringOrYear: number | string, month?: number, day?
 }
 
 async function getLecturePostInfos(postInfo: PostInfo, APIKey: string): Promise<Partial<LecturePostInfo>[] | null> {
-  const now = new Date()
   let rawLecturePost: string | null
   try {
     rawLecturePost = await parseLecturePost(postInfo, APIKey)
@@ -81,45 +79,15 @@ async function saveIslamicLecture({ postInfo, APIKey }: { postInfo: PostInfo; AP
   try {
     lecturePostInfos = await getLecturePostInfos(postInfo, APIKey)
   } catch (error: any) {
-    let rateLimitResetInfo: string | undefined
-    try {
-      if (error?.status == 429) {
-        const rateLimitReset = Date.now() + 200 + 1000 * 60
-        const requestRateLimit: RequestRateLimit = {
-          "X-RateLimit-Reset": String(rateLimitReset),
-        }
-        await db.insert(APIKeyRequestRateLimits).values({ APIKey, requestRateLimit }).onConflictDoUpdate({
-          target: APIKeyRequestRateLimits.APIKey,
-          set: { requestRateLimit },
-        })
-        rateLimitResetInfo = `API key request rate limit will be renewed at ${formatTimestampToGMT8Date(
-          rateLimitReset
-        )}`
-      }
-
-      await db.transaction(async (tx) => {
-        await tx
-          .insert(failedParsingPosts)
-          .values({ serverId: appConfig.serverId, postId: postInfo.id, retryCount: 1 })
-          .onConflictDoUpdate({
-            target: [failedParsingPosts.serverId, failedParsingPosts.postId],
-            set: {
-              retryCount: sql`${failedParsingPosts.retryCount} + 1`,
-            },
-          })
-      })
-    } catch (error: any) {
-      logger.error(error, { additionalMessage: "error sync handling rate limit renewed and/or retry failed" })
-    }
-    logger.error(error, { additionalMessage: `failed parsing ${postInfo.contentUrl}` })
-    return
+    logger.error(error, { additionalMessage: `failed parsing ${postInfo.postUrl}` })
+    return error
   }
 
   try {
     if (lecturePostInfos == null) {
       await db.update(posts).set({ isIslamicLecture: false }).where(eq(posts.id, postInfo.id))
-      logger.info(`success parsing ${postInfo.contentUrl}. This is not a lecture post`)
-      return
+      logger.info(`success parsing ${postInfo.postUrl}. This is not a lecture post`)
+      return null
     }
 
     await db.transaction(async (tx) => {
@@ -127,16 +95,51 @@ async function saveIslamicLecture({ postInfo, APIKey }: { postInfo: PostInfo; AP
       await tx.update(posts).set({ isIslamicLecture: true }).where(eq(posts.id, postInfo.id))
     })
   } catch (error: any) {
-    logger.error(error, { additionalMessage: `failed parsing ${postInfo.contentUrl}` })
-    return
+    logger.error(error, { additionalMessage: `failed parsing ${postInfo.postUrl}` })
+    return error
   }
 
+  logger.info(`success parsing ${postInfo.postUrl}. This is a lecture post`)
+  return null
+}
+
+async function waitRateLimitRenewed(rateLimitReset: number) {
+  const now = Date.now()
+  if (now <= rateLimitReset) {
+    const waitingTimems = rateLimitReset - now + (rateLimitReset - now) * 0.25
+    logger.info(`waiting request rate limit reset renewed in ${waitingTimems / 1000 / 60} minutes`)
+    await sleep(waitingTimems)
+    logger.info(`request rate limit reset has been renewed`)
+  }
+  await db.delete(APIKeyRequestRateLimits).where(eq(APIKeyRequestRateLimits.APIKey, appConfig.apiKey))
+}
+
+async function updateRateLimitTime(APIKey: string) {
+  const requestRateLimit = {
+    reset: Date.now() + 200 + 1000 * 60,
+    limit: null,
+    remaining: null,
+  }
   await db
-    .delete(failedParsingPosts)
-    .where(
-      sql`${failedParsingPosts.postId} = ${postInfo.id} AND ${failedParsingPosts.serverId} = ${appConfig.serverId}`
-    )
-  logger.info(`success parsing ${postInfo.contentUrl}. This is a lecture post`)
+    .insert(APIKeyRequestRateLimits)
+    .values({ APIKey, ...requestRateLimit })
+    .onConflictDoUpdate({
+      target: APIKeyRequestRateLimits.APIKey,
+      set: { ...requestRateLimit },
+    })
+  logger.error(`API key request rate limit will be renewed at ${formatTimestampToGMT8Date(requestRateLimit.reset)}`)
+}
+
+async function upsertFailedPostRetryCount(postInfo: PostInfo) {
+  await db
+    .insert(failedPosts)
+    .values({ serverId: appConfig.serverId, postId: postInfo.id, retryCount: 1 })
+    .onConflictDoUpdate({
+      target: [failedPosts.serverId, failedPosts.postId],
+      set: {
+        retryCount: sql`${failedPosts.retryCount} + 1`,
+      },
+    })
 }
 
 if (isMainThread) {
@@ -146,62 +149,55 @@ if (isMainThread) {
     onTick: async function () {
       const piscina = new Piscina({ filename: __filename })
       let postInfos = await db.select().from(posts).where(isNull(posts.isIslamicLecture))
-      const maxRetryCount = 3
-      const maxWorkers = 1
+
+      await db.delete(failedPosts).where(eq(failedPosts.serverId, appConfig.serverId))
+      logger.info("clear last failed posts tracks")
       try {
         while (postInfos.length > 0) {
-          const chunkData = postInfos.splice(0, maxWorkers).map((postInfo) => {
+          const chunkData = postInfos.splice(0, appConfig.maxLectureWorkers).map((postInfo) => {
             return {
               postInfo,
               APIKey: appConfig.apiKey,
             }
           })
-          let requestRateLimit = (
-            await db.select().from(APIKeyRequestRateLimits).where(eq(APIKeyRequestRateLimits.APIKey, appConfig.apiKey))
-          )?.[0]?.requestRateLimit
-          if (requestRateLimit) {
-            const now = Date.now()
-            const rateLimitReset = Number(requestRateLimit?.["X-RateLimit-Reset"])
-            if (now <= rateLimitReset) {
-              const waitingTimems = rateLimitReset - now + (rateLimitReset - now) * 0.25
-              logger.info(`waiting request rate limit reset renewed in ${waitingTimems / 1000 / 60} minutes`)
-              await sleep(waitingTimems)
-              logger.info(`request rate limit reset has been renewed`)
-            }
-            await db.delete(APIKeyRequestRateLimits).where(eq(APIKeyRequestRateLimits.APIKey, appConfig.apiKey))
-          }
+          let requestRateLimit = await db.query.APIKeyRequestRateLimits.findFirst({
+            where: sql`${APIKeyRequestRateLimits.APIKey} = ${appConfig.apiKey}`,
+          })
+          if (requestRateLimit) await waitRateLimitRenewed(requestRateLimit.reset!)
 
           await Promise.allSettled(
             chunkData.map(async ({ postInfo, APIKey }) => {
-              await piscina.run({ postInfo, APIKey })
+              const error = await piscina.run({ postInfo, APIKey })
 
-              const successPost = await db.query.lecturePosts.findFirst({
-                where: sql`${lecturePosts.postId} = ${postInfo.id}`,
+              if (error == null) return
+
+              if (error.status == 429) {
+                await updateRateLimitTime(APIKey)
+              }
+
+              await upsertFailedPostRetryCount(postInfo)
+
+              const failedPost = await db.query.failedPosts.findFirst({
+                where: sql`${failedPosts.postId} = ${postInfo.id} AND ${failedPosts.serverId} = ${appConfig.serverId}`,
               })
-              if (successPost) return
 
-              const failedPost = await db.query.failedParsingPosts.findFirst({
-                where: sql`${failedParsingPosts.postId} = ${postInfo.id} AND ${failedParsingPosts.serverId} = ${appConfig.serverId}`,
-              })
-
-              if (failedPost && failedPost.retryCount! <= maxRetryCount) {
+              if (failedPost!.retryCount! <= appConfig.maxLectureRetryCount) {
                 postInfos.push(postInfo)
-                const retryCount = failedPost.retryCount
+                const retryCount = failedPost!.retryCount
                 logger.info(
-                  `adding failed user post ${postInfo.contentUrl} to queue ${retryCount} ${
+                  `adding failed user post ${postInfo.postUrl} to queue ${retryCount} ${
                     retryCount == 1 ? "time" : "times"
                   }`
                 )
               }
             })
           )
+
           await sleep(200)
         }
       } catch (error: any) {
         logger.error(error)
       }
-
-      await db.delete(failedParsingPosts).where(eq(failedParsingPosts.serverId, appConfig.serverId))
       logger.info(
         `waiting next schedule for Parsing Islamic Lecture Posts in ${
           timeout(cronTime) / 1000 / 60

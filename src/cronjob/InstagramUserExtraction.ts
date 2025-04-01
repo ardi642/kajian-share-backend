@@ -1,14 +1,16 @@
 import qs from "qs"
 import { posts } from "../db/schema"
 import _appConfig from "../../app.config.json"
-import AppConfig from "../interface/AppConfig"
-import UserPosts from "./UserPosts"
-import loadJson from "../utils/loadJson"
-import ImageMetadata from "../interface/ImageMetadata"
+import AppConfig from "../interfaces/AppConfig"
+import UserExtraction from "./UserExtraction"
+import ImageMetadata from "../interfaces/ImageMetadata"
 import { getStringCookies } from "../utils/cookie"
+import logger from "../logger"
+
+const appConfig: AppConfig = _appConfig as AppConfig
 
 type PostInfo = typeof posts.$inferInsert
-
+let tes = false
 function parsingRawPosts(postDatas: any) {
   const dataEdges: any[] = postDatas.data.xdt_api__v1__feed__user_timeline_graphql_connection.edges
 
@@ -18,44 +20,63 @@ function parsingRawPosts(postDatas: any) {
       id: `${node.id}`,
       userId: `${node.user.pk}`,
       socialMediaType: "instagram",
-      description: node?.caption?.text ?? null,
+      description: node.caption.text ?? null,
       creationTime: node.taken_at,
       userUrl: `https://www.instagram.com/${node.user.username}`,
       username: node.user.username,
       userProfileName: node.user.full_name != "" ? node.user.full_name : null,
-      contentUrl: `https://www.instagram.com/p/${node.code}`,
+      profilePicture: decodeURIComponent(node.user.profile_pic_url),
+      postUrl: `https://www.instagram.com/p/${node.code}`,
       images: null,
       isIslamicLecture: null,
     }
 
-    let images: any[] | undefined = node?.image_versions2?.candidates
-    if (images != undefined && (images.length as number) > 0) {
-      images.sort((a, b) => {
-        if (a.height === b.height) return a.width - b.width
-        return a.height - b.height
+    let candidateImages: any[] | undefined = node?.image_versions2?.candidates
+    const maxHeight = 640
+    const carouselMediaCount = node?.carousel_media_count
+    if (carouselMediaCount == null && Array.isArray(candidateImages) && candidateImages.length > 0) {
+      candidateImages.sort((a: any, b: any) => {
+        if (b.height === a.height) return b.width - a.width
+        return b.height - a.height
       })
 
-      const maxHeight = 640
+      const filterCandidateImages = candidateImages.filter((image: any) => image.height <= maxHeight)
+      let candidateImage: any
+      let selectedImage: ImageMetadata
+      if (filterCandidateImages.length > 0) candidateImage = filterCandidateImages[0]
+      else candidateImage = candidateImages[candidateImages.length - 1]
 
-      const filterImages = images.filter((image) => image.height <= maxHeight)
-      if (filterImages.length > 0) {
-        const lastFilterImage = filterImages[filterImages.length - 1]
-        const image: ImageMetadata = {
-          url: lastFilterImage.url,
-          width: lastFilterImage.width,
-          height: lastFilterImage.height,
-        }
-        postInfo.images = [image]
-      } else {
-        const lastImage = images[images.length - 1]
-        const image: ImageMetadata = {
-          url: lastImage.url,
-          width: lastImage.width,
-          height: lastImage.height,
-        }
-        postInfo.images = [image]
+      selectedImage = {
+        url: decodeURIComponent(candidateImage.url),
+        height: candidateImage.height,
+        width: candidateImage.width,
+        accessibilityCaption: node.accessibility_caption ?? null,
       }
+      postInfo.images = [selectedImage]
+    } else if (typeof carouselMediaCount == "number") {
+      const carouselMedia: any[] = node.carousel_media
+      const carouselImages: ImageMetadata[] = carouselMedia.map((media) => {
+        const candidateImages: any[] = media.image_versions2.candidates
+        const sortCandidateImages = candidateImages.sort((a: any, b: any) => {
+          if (b.height === a.height) return b.width - a.width
+          return b.height - a.height
+        })
+
+        const filterCandidateImages = sortCandidateImages.filter((image: any) => image.height <= maxHeight)
+        let candidateImage: any
+        if (filterCandidateImages.length > 0) candidateImage = filterCandidateImages[0]
+        else candidateImage = candidateImages[candidateImages.length - 1]
+
+        return {
+          url: decodeURIComponent(candidateImage.url),
+          height: candidateImage.height,
+          width: candidateImage.width,
+          accessibilityCaption: media.accessibility_caption ?? null,
+        }
+      })
+      postInfo.images = carouselImages
     }
+
     return postInfo
   })
 }
@@ -99,7 +120,7 @@ function getUsernameFromUserUrl(userUrl: string) {
 
 function checkExtractPostStopCondition(posts: PostInfo[], stopPostId: string | null, stopCreationTime: number) {
   for (const post of posts) {
-    if (post.id === stopPostId || post.creationTime! < stopCreationTime) return true
+    if (post.id === stopPostId || post.creationTime < stopCreationTime) return true
   }
   return false
 }
@@ -108,7 +129,7 @@ function getPageInfo(rawUserPosts: any) {
   return rawUserPosts.data.xdt_api__v1__feed__user_timeline_graphql_connection.page_info
 }
 
-export default class InstagramUserPosts extends UserPosts {
+export default class InstagramUserExtraction extends UserExtraction {
   async extractPosts({
     userUrl,
     stopPostId,
@@ -124,7 +145,6 @@ export default class InstagramUserPosts extends UserPosts {
     const username = getUsernameFromUserUrl(userUrl)
     let payload = generatePayload({ username })
     try {
-      const appConfig: AppConfig = await loadJson("app.config.json")
       const instagramCookie = getStringCookies(appConfig.cookies[".instagram.com"])
       while (true) {
         const response = await fetch("https://www.instagram.com/graphql/query", {
@@ -137,10 +157,17 @@ export default class InstagramUserPosts extends UserPosts {
         })
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}`)
         const currentRawUserPosts = await response.json()
-        if (currentRawUserPosts.hasOwnProperty("errors")) throw new Error(`Payload not correct`)
+        let pageInfo: any
+        let currentUserPosts: any[]
+        try {
+          if (currentRawUserPosts.hasOwnProperty("errors")) throw new Error(`Payload not correct`)
 
-        const pageInfo = getPageInfo(currentRawUserPosts)
-        const currentUserPosts = parsingRawPosts(currentRawUserPosts)
+          pageInfo = getPageInfo(currentRawUserPosts)
+          currentUserPosts = parsingRawPosts(currentRawUserPosts)
+        } catch (error: any) {
+          logger.error(`there is error when fetching or parsing ${userUrl} data`)
+          throw error
+        }
 
         userPosts = [...userPosts, ...currentUserPosts]
         if (!pageInfo.has_next_page) break

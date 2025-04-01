@@ -1,19 +1,25 @@
 {
   "userUrls": [
-    "https://web.facebook.com/MuadzTV",
-    "https://www.instagram.com/raudhatuljannahkdi.official",
-    "https://web.facebook.com/profile.php?id=100064186086274",
-    "https://web.facebook.com/nuraden.kendari",
-    "https://web.facebook.com/Iqbalbinjalalofficial"
+    "https://web.facebook.com/100064186086274",
+    "https://web.facebook.com/100022899126208",
+    "https://web.facebook.com/100051205013508",
+    "https://web.facebook.com/100067593821039",
+    "https://www.instagram.com/raudhatuljannahkdi.official"
   ],
-  "wsEndPoint": "ws://127.0.0.1:9222/devtools/browser/ffcab98f-fb4c-4f36-95c6-0e0901cfaea3",
-  "apiKey": "isi api key dari LLM google",
-  "serverId": "isi dengan UUID",
+  "maxBrowserRetryCount": 3,
+  "maxLectureRetryCount": 3,
+  "maxUserRetryCount": 3,
+  "maxLectureWorkers": 3,
+  "maxUserWorkers": 3,
+  "environment": "development",
+  "wsEndPoint": "ws://127.0.0.1:9222/devtools/browser/918c4f82-ac7c-4138-a5a7-4d9fc559f1f5",
+  "apiKey": "Api key LLM dari google",
+  "serverId": "UUID unik untuk id server",
   "cookies": {
     ".facebook.com": [
       {
         "name": "dbln",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".facebook.com",
         "path": "/login/device-based/",
         "expires": 1749278088.783115,
@@ -29,7 +35,7 @@
       },
       {
         "name": "ps_l",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".facebook.com",
         "path": "/",
         "expires": 1776061988.632929,
@@ -45,7 +51,7 @@
       },
       {
         "name": "ps_n",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".facebook.com",
         "path": "/",
         "expires": 1776061988.633056,
@@ -61,7 +67,7 @@
       },
       {
         "name": "datr",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".facebook.com",
         "path": "/",
         "expires": 1776061989.702894,
@@ -77,7 +83,7 @@
       },
       {
         "name": "sb",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".facebook.com",
         "path": "/",
         "expires": 1776062004.945252,
@@ -93,7 +99,7 @@
       },
       {
         "name": "c_user",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".facebook.com",
         "path": "/",
         "expires": 1774630550.997103,
@@ -109,7 +115,7 @@
       },
       {
         "name": "dpr",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".facebook.com",
         "path": "/",
         "expires": 1743699350,
@@ -125,7 +131,7 @@
       },
       {
         "name": "wd",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".facebook.com",
         "path": "/",
         "expires": 1743699350,
@@ -141,7 +147,7 @@
       },
       {
         "name": "fr",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".facebook.com",
         "path": "/",
         "expires": 1750870550.997258,
@@ -157,7 +163,7 @@
       },
       {
         "name": "xs",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".facebook.com",
         "path": "/",
         "expires": 1774630550.997324,
@@ -175,7 +181,7 @@
     ".instagram.com": [
       {
         "name": "csrftoken",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".instagram.com",
         "path": "/",
         "expires": 1773758462.930806,
@@ -190,7 +196,7 @@
       },
       {
         "name": "datr",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".instagram.com",
         "path": "/",
         "expires": 1776868830.505628,
@@ -206,7 +212,7 @@
       },
       {
         "name": "ig_did",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".instagram.com",
         "path": "/",
         "expires": 1773844859.884055,
@@ -221,7 +227,7 @@
       },
       {
         "name": "mid",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".instagram.com",
         "path": "/",
         "expires": 1776868831,
@@ -236,7 +242,7 @@
       },
       {
         "name": "ig_nrcb",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".instagram.com",
         "path": "/",
         "expires": 1773844846.296056,
@@ -251,7 +257,7 @@
       },
       {
         "name": "sessionid",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".instagram.com",
         "path": "/",
         "expires": 1773844859.88389,
@@ -266,7 +272,7 @@
       },
       {
         "name": "ds_user_id",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".instagram.com",
         "path": "/",
         "expires": 1750084862.930903,
@@ -281,7 +287,7 @@
       },
       {
         "name": "ps_l",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".instagram.com",
         "path": "/",
         "expires": 1776868860.892106,
@@ -297,7 +303,7 @@
       },
       {
         "name": "ps_n",
-        "value": "sesuai dengan nilai value pada cookie",
+        "value": "nilai value",
         "domain": ".instagram.com",
         "path": "/",
         "expires": 1776868860.892196,

@@ -1,7 +1,6 @@
 import { relations, sql } from "drizzle-orm"
 import { sqliteTable, integer, text, unique, primaryKey } from "drizzle-orm/sqlite-core"
-import RequestRateLimit from "../interface/RequestRateLimit"
-import ImageMetadata from "../interface/ImageMetadata"
+import ImageMetadata from "../interfaces/ImageMetadata"
 
 export const lecturePosts = sqliteTable("lecturePosts", {
   id: integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
@@ -19,37 +18,38 @@ export const lecturePosts = sqliteTable("lecturePosts", {
 
 export const posts = sqliteTable("posts", {
   id: text().primaryKey(),
-  userId: text(),
-  socialMediaType: text({ enum: ["facebook", "instagram"] }),
+  userId: text().notNull(),
+  socialMediaType: text({ enum: ["facebook", "instagram"] }).notNull(),
   description: text().default(sql`null`),
-  creationTime: integer().default(sql`null`),
-  userUrl: text().default(sql`null`),
+  creationTime: integer().notNull(),
+  userUrl: text().notNull(),
   username: text().default(sql`NULL`),
-  userProfileName: text().default(sql`null`),
-  contentUrl: text().default(sql`null`),
+  userProfileName: text().notNull(),
+  postUrl: text().notNull(),
+  profilePicture: text(),
   isIslamicLecture: integer({ mode: "boolean" }).default(sql`null`),
   images: text({ mode: "json" })
     .$type<ImageMetadata[]>()
     .default(sql`null`),
 })
 
-export const userPostTrackers = sqliteTable("userPostTrackers", {
+export const userTrackers = sqliteTable("userPostTrackers", {
   userUrl: text().primaryKey(),
   lastSuccessfulPostId: text(),
   lastPostId: text(),
+  lastSuccessfulCreationTime: integer(),
+  lastCreationTime: integer(),
 })
 
 export const APIKeyRequestRateLimits = sqliteTable("APIKeyRequestRateLimits", {
   APIKey: text().primaryKey(),
-  requestRateLimit: text({
-    mode: "json",
-  })
-    .$type<RequestRateLimit>()
-    .default(sql`null`),
+  limit: integer().default(sql`null`),
+  remaining: integer().default(sql`null`),
+  reset: integer().default(sql`null`),
 })
 
-export const failedParsingPosts = sqliteTable(
-  "failedParsingPosts",
+export const failedPosts = sqliteTable(
+  "failedPosts",
   {
     serverId: text(),
     postId: text()
@@ -60,8 +60,8 @@ export const failedParsingPosts = sqliteTable(
   (t) => [primaryKey({ columns: [t.serverId, t.postId] })]
 )
 
-export const failedParsingUsers = sqliteTable(
-  "failedParsingUsers",
+export const failedUsers = sqliteTable(
+  "failedUsers",
   {
     userUrl: text(),
     serverId: text(),
@@ -70,9 +70,9 @@ export const failedParsingUsers = sqliteTable(
   (t) => [primaryKey({ columns: [t.userUrl, t.serverId] })]
 )
 
-export const failedParsingPostsRelations = relations(failedParsingPosts, ({ one }) => ({
+export const failedParsingPostsRelations = relations(failedPosts, ({ one }) => ({
   post: one(posts, {
-    fields: [failedParsingPosts.postId],
+    fields: [failedPosts.postId],
     references: [posts.id],
   }),
 }))
@@ -86,5 +86,5 @@ export const lecturePostsRelations = relations(lecturePosts, ({ one, many }) => 
     fields: [lecturePosts.postId],
     references: [posts.id],
   }),
-  failedParsingPosts: one(failedParsingPosts),
+  failedParsingPosts: one(failedPosts),
 }))

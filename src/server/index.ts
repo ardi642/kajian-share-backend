@@ -2,10 +2,10 @@ import express from "express"
 import { db } from "../utils/database"
 import { eq, or, SQL, sql } from "drizzle-orm"
 import { lecturePosts, posts } from "../db/schema"
-import AppConfig from "../interface/AppConfig"
-import _appConfig from "../../AppConfig.json"
+import AppConfig from "../interfaces/AppConfig"
+import _appConfig from "../../app.config.json"
 
-const appConfig: AppConfig = _appConfig
+const appConfig = _appConfig as AppConfig
 const app = express()
 const port = appConfig.port || 3000
 

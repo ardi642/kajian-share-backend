@@ -1,7 +1,7 @@
 import * as path from "path"
 import * as fs from "fs"
 
-export default async function loadJson(filePath: string): Promise<any> {
+export default async function loadJSON(filePath: string): Promise<any> {
   return new Promise((resolve, reject) => {
     const fullPath = path.resolve(filePath) // Resolve path absolut
     fs.readFile(fullPath, "utf8", (err, data) => {

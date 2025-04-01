@@ -1,5 +1,9 @@
 import winston from "winston"
 const { combine, json, errors } = winston.format
+import AppConfig from "../interfaces/AppConfig"
+import _appConfig from "../../app.config.json"
+
+const appConfig = _appConfig as AppConfig
 
 function getISOGMT8Datetime(timestamp: number): string {
   const offset = 8 * 60
@@ -22,9 +26,20 @@ const GMT8Timestamp = winston.format((info) => {
 
 winston.loggers.add("developmentLogger", {
   level: "info",
-  format: combine(errors({ cause: true }), GMT8Timestamp(), json()),
+  format: combine(errors({ cause: true, stack: true }), GMT8Timestamp(), json()),
   transports: [new winston.transports.Console()],
 })
 
-const logger = winston.loggers.get("developmentLogger")
-export default logger
+winston.loggers.add("productionLogger", {
+  level: "info",
+  format: combine(errors(), GMT8Timestamp(), json()),
+  transports: [new winston.transports.Console()],
+})
+
+let logger: winston.Logger
+const environment = appConfig.environment || "development"
+
+if (environment == "production") logger = winston.loggers.get("productionLogger")
+else if (environment == "development") logger = winston.loggers.get("environmentLogger")
+
+export default logger!
