@@ -68,8 +68,16 @@ function captureInitialGraphqlRequest(graphqlHeaders: any, graphqlPostData: any)
         return
       }
 
+      const { fb_dtsg, fb_api_caller_class, fb_api_req_friendly_name, variables, server_timestamps, doc_id } = postData
       Object.assign(graphqlHeaders, request.headers())
-      Object.assign(graphqlPostData, postData)
+      Object.assign(graphqlPostData, {
+        fb_dtsg,
+        fb_api_caller_class,
+        fb_api_req_friendly_name,
+        variables,
+        server_timestamps,
+        doc_id,
+      })
 
       initialRequest = true
     }
