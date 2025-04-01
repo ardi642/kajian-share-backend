@@ -1,9 +1,16 @@
 import winston from "winston"
+import "winston-daily-rotate-file"
 const { combine, json, errors } = winston.format
 import AppConfig from "../interfaces/AppConfig"
 import _appConfig from "../../app.config.json"
 
 const appConfig = _appConfig as AppConfig
+
+const fileTransport = new winston.transports.DailyRotateFile({
+  filename: "logs/user-%DATE%.log",
+  datePattern: "YYYY-MM-DD",
+  maxFiles: "7d",
+})
 
 function getISOGMT8Datetime(timestamp: number): string {
   const offset = 8 * 60
@@ -26,20 +33,20 @@ const GMT8Timestamp = winston.format((info) => {
 
 winston.loggers.add("developmentLogger", {
   level: "info",
-  format: combine(errors({ cause: true, stack: true }), GMT8Timestamp(), json()),
+  format: combine(errors(), GMT8Timestamp(), json()),
   transports: [new winston.transports.Console()],
 })
 
 winston.loggers.add("productionLogger", {
-  level: "info",
-  format: combine(errors(), GMT8Timestamp(), json()),
-  transports: [new winston.transports.Console()],
+  level: "error",
+  format: combine(errors({ cause: true, stack: true }), GMT8Timestamp(), json()),
+  transports: [fileTransport],
 })
 
 let logger: winston.Logger
 const environment = appConfig.environment || "development"
 
 if (environment == "production") logger = winston.loggers.get("productionLogger")
-else if (environment == "development") logger = winston.loggers.get("environmentLogger")
+else if (environment == "development") logger = winston.loggers.get("developmentLogger")
 
 export default logger!

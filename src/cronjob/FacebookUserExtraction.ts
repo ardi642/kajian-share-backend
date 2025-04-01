@@ -6,7 +6,7 @@ import loadJSON from "../utils/loadJSON"
 import puppeteer, { Browser } from "puppeteer"
 import ImageMetadata from "../interfaces/ImageMetadata"
 import QueryString from "qs"
-import logger from "../logger"
+import logger from "../logger/userLogger"
 
 const appConfig = _appConfig as AppConfig
 
@@ -65,6 +65,7 @@ function parsingRawPosts(rawUserPosts: any[]) {
       userPost.images = [image]
     }
     if (userPost.description == null && userPost.images == null) continue
+    const secondUrl = node.comet_sections.context_layout.story.comet_sections.actor_photo.story.actors[0].url
     userPosts.push(userPost as PostInfo)
   }
 

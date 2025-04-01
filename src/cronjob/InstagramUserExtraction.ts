@@ -5,7 +5,7 @@ import AppConfig from "../interfaces/AppConfig"
 import UserExtraction from "./UserExtraction"
 import ImageMetadata from "../interfaces/ImageMetadata"
 import { getStringCookies } from "../utils/cookie"
-import logger from "../logger"
+import logger from "../logger/userLogger"
 
 const appConfig: AppConfig = _appConfig as AppConfig
 

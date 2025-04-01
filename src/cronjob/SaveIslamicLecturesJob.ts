@@ -7,7 +7,7 @@ import AppConfig from "../interfaces/AppConfig"
 import { parseLecturePost } from "../utils/LLM"
 import { isMainThread } from "worker_threads"
 import Piscina from "piscina"
-import logger from "../logger"
+import logger from "../logger/lectureLogger"
 
 type PostInfo = typeof posts.$inferInsert
 type LecturePostInfo = typeof lecturePosts.$inferInsert

@@ -11,7 +11,7 @@ import loadJSON from "../utils/loadJSON"
 import { failedUsers } from "../db/schema"
 import { eq, sql } from "drizzle-orm"
 import { db } from "../utils/database"
-import logger from "../logger"
+import logger from "../logger/userLogger"
 import QueryString from "qs"
 
 function sleep(ms: number) {

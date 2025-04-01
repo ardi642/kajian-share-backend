@@ -3,7 +3,7 @@ import { posts, userTrackers } from "../db/schema"
 import { sql } from "drizzle-orm"
 import _appConfig from "../../app.config.json"
 import AppConfig from "../interfaces/AppConfig"
-import logger from "../logger"
+import logger from "../logger/userLogger"
 
 type PostInfo = typeof posts.$inferInsert
 
