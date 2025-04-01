@@ -62,7 +62,7 @@ export default abstract class UserExtraction {
     }
 
     if (error == null) {
-      console.log(`success extract ${userUrl} new posts`)
+      logger.info(`success extract ${userUrl} new posts`)
 
       if (userPosts.length > 0) {
         currentUserTracker.lastSuccessfulPostId = newPost!.id
