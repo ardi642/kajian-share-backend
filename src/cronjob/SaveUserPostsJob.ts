@@ -99,18 +99,20 @@ if (isMainThread) {
       try {
         await db.delete(failedUsers).where(eq(failedUsers.serverId, appConfig.serverId))
         logger.info("clear last failed users tracks")
+        const browserArgs = [
+          "--remote-debugging-port=9222",
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-gpu",
+          "--mute-audio",
+          "--disable-background-timer-throttling",
+          "--force-device-scale-factor=1",
+        ]
+        if (appConfig.browserProxyUrl) browserArgs.push(`--proxy-server=${appConfig.browserProxyUrl}`)
         browser = await puppeteer.launch({
           headless: true,
           defaultViewport: null,
-          args: [
-            "--remote-debugging-port=9222",
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-gpu",
-            "--mute-audio",
-            "--disable-background-timer-throttling",
-            "--force-device-scale-factor=1",
-          ],
+          args: browserArgs,
         })
         browser.setCookie(...appConfig.cookies[".facebook.com"])
         appConfig.wsEndPoint = browser.wsEndpoint()

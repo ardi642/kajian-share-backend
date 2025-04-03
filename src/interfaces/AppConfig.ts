@@ -12,6 +12,6 @@ export default interface AppConfig {
   wsEndPoint: string
   apiKey: string
   serverId: string
-  port?: number
+  browserProxyUrl?: string
   cookies: Record<string, any[]>
 }
